@@ -30,6 +30,7 @@ extern crate serde_derive;
 mod cmd;     /* command-line parser */
 mod context; /* describe the linking context */
 mod config;  /* configuration file parser */
+mod search;  /* find files for the linking process */
 
 fn main()
 {
@@ -47,21 +48,44 @@ fn main()
     let config = config::parse_config(&config_filename);
     eprintln!("il: entry symbol = {}", config.get_entry());
 
+    let mut paths = search::Paths::new();
+
     for item in context.stream_iter()
     {
         match item
         {
-            context::StreamItem::Object(f)     => eprintln!("--> object          {}", f),
-            context::StreamItem::SearchPath(f) => eprintln!("--> add search path {}", f),
+            context::StreamItem::SearchPath(f) => paths.add(&f),
+            context::StreamItem::Object(f) | context::StreamItem::Archive(f) =>
+            {
+                match paths.find_file(&f)
+                {
+                    Some(path) => eprintln!("--> To process: {:?}", path.as_path().to_str()),
+                    None =>
+                    {
+                        eprintln!("Cannot find file {} to link", f);
+                        std::process::exit(1);
+                    }
+                }
+            },
             context::StreamItem::Group(g) => for archive in g.iter()
             {
                 match archive
                 {
-                    context::StreamItem::Archive(f) => eprintln!("--> group archive   {}", f),
+                    context::StreamItem::Archive(f) =>
+                    {
+                        match paths.find_file(&f)
+                        {
+                            Some(path) => eprintln!("--> (group) To process: {:?}", path.as_path().to_str()),
+                            None =>
+                            {
+                                eprintln!("Cannot find file {} to link", f);
+                                std::process::exit(1);
+                            }
+                        }
+                    },
                     _ => eprintln!("??? Unexpected item in group")
                 }
             }
-            _ => eprintln!("??? Unexpected item in stream")
         }
     }
 
