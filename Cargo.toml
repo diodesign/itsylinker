@@ -1,5 +1,5 @@
 [package]
-name = "tinylinker"
+name = "itsylinker"
 version = "0.0.1"
 authors = ["Chris Williams <chrisw@diosix.org>"]
 description = "Minimal RV64I ELF linker"

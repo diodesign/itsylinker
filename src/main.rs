@@ -1,8 +1,8 @@
-/* Tiny Linker
+/* itsylinker
  * 
  * Minimalist linker that generates 64-bit RISC-V (RV64I) ELF files
  *
- * Syntax: tinylinker [options] objects...
+ * Syntax: itsylinker [options] objects...
  * 
  * It accepts the following binutils ld-compatible command-line arguments:
  * 
@@ -28,7 +28,7 @@ mod context; /* describe the linking context */
 fn main()
 {
     let context = cmd::parse_args();
-    eprintln!("tl: config: {} output: {}",
+    eprintln!("il: config: {} output: {}",
         context.get_config_file().unwrap_or(String::from("none")),
         context.get_output_file());
 

@@ -1,6 +1,6 @@
-# tinylinker
+# itsylinker
 
-Generate 64-bit RISC-V (RV64I) ELF files primarily for the [Diosix](https://diosix.org) project.
+Generate 64-bit RISC-V (RV64I) ELF files. The goal of this project is to produce a minimalist, stable linker in Rust primarily for the [Diosix](https://diosix.org) project. It is compatible with the `binutils ld` interface.
 
 ### Contact and code of conduct <a name="contact"></a>
 

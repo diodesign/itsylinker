@@ -1,4 +1,4 @@
-/* Tiny Linker command-line parser
+/* itsylinker command-line parser
  * 
  * (c) Chris Williams, 2021.
  *
@@ -143,7 +143,7 @@ fn parse_single_arg(arg: &String) -> (bool, Option<State>)
 /* softare information and error messages */
 fn version_die()
 {
-    eprintln!("Tiny Linker {} by {}", env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"));
+    eprintln!("{} {} by {}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"));
     std::process::exit(1);
 }
 
@@ -155,6 +155,6 @@ fn usage_die()
 
 fn wrong_flavor_die()
 {
-    eprintln!("Tiny Linker only supports the 'gnu' interface flavor");
+    eprintln!("{} only supports the 'gnu' interface flavor", env!("CARGO_PKG_NAME"));
     std::process::exit(1);
 }
