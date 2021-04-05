@@ -11,3 +11,5 @@ edition = "2018"
 toml = "0.5.8"
 serde = "1.0.118"
 serde_derive = "1.0.118"
+goblin = "0.3.4"
+byterider = { git = "https://github.com/diodesign/byterider.git" }

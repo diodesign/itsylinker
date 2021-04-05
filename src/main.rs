@@ -26,6 +26,10 @@
 extern crate toml;
 extern crate serde;
 extern crate serde_derive;
+extern crate byterider;
+extern crate goblin;
+
+use std::path::PathBuf;
 
 mod cmd;     /* command-line parser */
 mod context; /* describe the linking context */
@@ -113,6 +117,20 @@ fn process_group(group: context::Group, paths: &search::Paths)
         if refs == 0
         {
             break;
+        }
+    }
+}
+
+/* generic function to load a file into a byte vector, or bail on error */
+pub fn load_file_into_bytes(filename: PathBuf) -> Vec<u8>
+{
+    match std::fs::read(filename.as_path())
+    {
+        Ok(s) => s,
+        Err(e) =>
+        {
+            eprintln!("Cannot load object file {}: {}", filename.as_path().to_str().unwrap(), e);
+            std::process::exit(1);
         }
     }
 }
