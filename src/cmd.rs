@@ -47,7 +47,7 @@ pub fn parse_args() -> Context
                 match parse_single_arg(arg)
                 {
                     (true, Some(s)) => state = s,
-                    (false, None) => context.add_to_stream(StreamItem::Object(arg.clone())),
+                    (false, None) => context.add_to_stream(StreamItem::File(arg.clone())),
                     (_, _) => ()
                 }
             },
@@ -65,7 +65,7 @@ pub fn parse_args() -> Context
                         state = State::ExpectingAnything;
                         group = Group::new();
                     },
-                    (false, None) => group.add(StreamItem::Archive(arg.clone())),
+                    (false, None) => group.add(StreamItem::File(arg.clone())),
                     (_, _) => ()
                 }   
             }

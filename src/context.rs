@@ -15,8 +15,7 @@ pub type Filename = String;
 #[derive(Clone)]
 pub enum StreamItem
 {
-    Object(Filename),
-    Archive(Filename),
+    File(Filename),
     SearchPath(Filename),
     Group(Group)
 }

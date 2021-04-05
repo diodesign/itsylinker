@@ -31,9 +31,12 @@ mod cmd;     /* command-line parser */
 mod context; /* describe the linking context */
 mod config;  /* configuration file parser */
 mod search;  /* find files for the linking process */
+mod obj;     /* parse object files */
+mod rlib;    /* parse rlib files */
 
 fn main()
 {
+    /* find out what needs to be done from command line arguments */
     let context = cmd::parse_args();
     let config_filename = match context.get_config_file()
     {
@@ -45,49 +48,71 @@ fn main()
         }
     };
 
+    /* find out what needs to be done from the specified configuration file */
     let config = config::parse_config(&config_filename);
     eprintln!("il: entry symbol = {}", config.get_entry());
 
+    /* get a database ready of paths to search files for in */
     let mut paths = search::Paths::new();
-
+    
+    /* run through a stream of actions to take to complete the linking process */
     for item in context.stream_iter()
     {
         match item
         {
             context::StreamItem::SearchPath(f) => paths.add(&f),
-            context::StreamItem::Object(f) | context::StreamItem::Archive(f) =>
-            {
-                match paths.find_file(&f)
-                {
-                    Some(path) => eprintln!("--> To process: {:?}", path.as_path().to_str()),
-                    None =>
-                    {
-                        eprintln!("Cannot find file {} to link", f);
-                        std::process::exit(1);
-                    }
-                }
-            },
-            context::StreamItem::Group(g) => for archive in g.iter()
-            {
-                match archive
-                {
-                    context::StreamItem::Archive(f) =>
-                    {
-                        match paths.find_file(&f)
-                        {
-                            Some(path) => eprintln!("--> (group) To process: {:?}", path.as_path().to_str()),
-                            None =>
-                            {
-                                eprintln!("Cannot find file {} to link", f);
-                                std::process::exit(1);
-                            }
-                        }
-                    },
-                    _ => eprintln!("??? Unexpected item in group")
-                }
-            }
+            context::StreamItem::Group(g) => process_group(g, &paths),
+            context::StreamItem::File(f) => { process_file(f, &paths); }
         }
     }
 
     std::process::exit(1);
+}
+
+/* link the given file into the final executable. return number of new unresolved references */
+fn process_file(filename: String, paths: &search::Paths) -> usize
+{
+    if let Some(path) = paths.find_file(&filename)
+    {
+        /* don't pass bad filenames to the linker, it will bail out in a panic */
+        match path.as_path().extension().unwrap().to_str().unwrap()
+        {
+            "o" => obj::link(path),
+            "rlib" => rlib::link(path),
+            ext =>
+            {
+                eprintln!("Unrecognized file to link: {}", ext);
+                std::process::exit(1);
+            }
+        }
+    }
+    else
+    {
+        eprintln!("Cannot find file {} to link", filename);
+        std::process::exit(1);
+    }
+}
+
+/* loop through the group's files over and over until there are no new unresolved references */
+fn process_group(group: context::Group, paths: &search::Paths)
+{
+    loop
+    {
+        let mut refs = 0;
+
+        for member in group.iter()
+        {
+            match member
+            {
+                context::StreamItem::File(f) => refs = refs + process_file(f.clone(), paths),
+                _ => () /* ignore non-files */
+            }
+        }
+
+        /* exit when we're done creating unresolved references within this group */
+        if refs == 0
+        {
+            break;
+        }
+    }
 }
