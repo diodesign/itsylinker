@@ -15,22 +15,37 @@
  * --help           Display minimal usage information
  * --version        Display version information
  * 
- * Interspersed in the command line arguments are object and library files to link together to form the final ELF executable
+ * Interspersed in the command line arguments are object and library files to link together to form the final ELF executable.
+ * Note: A configuration file must be provided. This is a toml file described in config.rs. It is not compatible with other linkers.
  * 
  * (c) Chris Williams, 2021.
  *
  * See LICENSE for usage and copying.
  */
 
+extern crate toml;
+extern crate serde;
+extern crate serde_derive;
+
 mod cmd;     /* command-line parser */
 mod context; /* describe the linking context */
+mod config;  /* configuration file parser */
 
 fn main()
 {
     let context = cmd::parse_args();
-    eprintln!("il: config: {} output: {}",
-        context.get_config_file().unwrap_or(String::from("none")),
-        context.get_output_file());
+    let config_filename = match context.get_config_file()
+    {
+        Some(f) => f,
+        None =>
+        {
+            eprintln!("Linker configuration file must be specified with -T");
+            std::process::exit(1);
+        }
+    };
+
+    let config = config::parse_config(&config_filename);
+    eprintln!("il: entry symbol = {}", config.get_entry());
 
     for item in context.stream_iter()
     {
