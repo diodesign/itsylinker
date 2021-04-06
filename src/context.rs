@@ -8,6 +8,10 @@
  * See LICENSE for usage and copying.
  */
 
+use super::obj;
+use super::rlib;
+use super::search::Paths;
+
 pub type Filename = String;
 
 /* we have to handle a stream of input items, which could be
@@ -58,6 +62,7 @@ impl Context
         }
     }
 
+    /* functions to update and access the link context */
     pub fn add_to_stream(&mut self, item: StreamItem)
     {
         self.input_stream.push(item);
@@ -79,6 +84,62 @@ impl Context
     pub fn stream_iter(&self) -> ActionIter
     {
         ActionIter::new(&self)
+    }
+
+    /* run through the stream of actions to take to complete the linking process */
+    pub fn hit_it(&self, paths: &mut Paths)
+    {
+        for item in self.stream_iter()
+        {
+            match item
+            {
+                StreamItem::SearchPath(f) => paths.add(&f),
+                StreamItem::Group(g) => self.process_group(g, &paths),
+                StreamItem::File(f) => { self.process_file(f, &paths); }
+            }
+        }
+    }
+
+    /* link the given file into the final executable. return number of new unresolved references */
+    fn process_file(&self, filename: String, paths: &Paths) -> usize
+    {
+        if let Some(path) = paths.find_file(&filename)
+        {
+            match path.as_path().extension().unwrap().to_str().unwrap()
+            {
+                "o" => obj::link(path),
+                "rlib" => rlib::link(path),
+                _ => super::fatal_msg!("Unrecognized file to link: {}", filename)
+            }
+        }
+        else
+        {
+            super::fatal_msg!("Cannot find file {} to link", filename);
+        }
+    }
+
+    /* loop through the group's files over and over until there are no new unresolved references */
+    fn process_group(&self, group: Group, paths: &Paths)
+    {
+        loop
+        {
+            let mut new_refs = 0;
+
+            for member in group.iter()
+            {
+                match member
+                {
+                    StreamItem::File(f) => new_refs = new_refs + self.process_file(f.clone(), paths),
+                    _ => () /* ignore non-files */
+                }
+            }
+
+            /* exit when we're done creating unresolved references within this group */
+            if new_refs == 0
+            {
+                break;
+            }
+        }
     }
 }
 

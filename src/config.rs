@@ -46,20 +46,12 @@ pub fn parse_config(filename: &String) -> Config
     let config_contents = match std::fs::read_to_string(filename)
     {
         Ok(c) => c,
-        Err(e) =>
-        {
-            eprintln!("Can't read configuration file {}: {}", filename, e);
-            std::process::exit(1);
-        }
+        Err(e) => super::fatal_msg!("Can't read configuration file {}: {}", filename, e)
     };
 
     match toml::from_str(config_contents.as_str())
     {
         Ok(c) => c,
-        Err(e) =>
-        {
-            eprintln!("Can't parse configutation file {}: {}", filename, e);
-            std::process::exit(1);
-        }
+        Err(e) => super::fatal_msg!("Can't parse configutation file {}: {}", filename, e)
     }
 }

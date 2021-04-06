@@ -29,11 +29,6 @@ pub fn parse_args() -> Context
     the first argument because it's just the program name */
     let arg_array = std::env::args().collect::<Vec<String>>().split_off(1);
     let args = arg_array.as_slice();
-    if args.len() == 0
-    {
-        /* no arguments? bail out with a message hinting at what we'd expect */
-        usage_die();
-    }
 
     for arg in args
     {
@@ -93,7 +88,11 @@ pub fn parse_args() -> Context
 
             State::ExpectingFlavorType =>
             {
-                if arg != "gnu" { wrong_flavor_die() }
+                if arg != "gnu"
+                {
+                    super::fatal_msg!("{} only supports the 'gnu' interface flavor",
+                        env!("CARGO_PKG_NAME"));
+                }
                 state = State::ExpectingAnything;
             }
         }
@@ -107,10 +106,20 @@ pub fn parse_args() -> Context
 fn parse_single_arg(arg: &String) -> (bool, Option<State>)
 {
     /* display minimal help and exit */
-    if arg == "--help" { usage_die() }
+    if arg == "--help"
+    {
+        super::fatal_msg!("Usage: {} [options] <file>...",
+            env!("CARGO_BIN_NAME"));
+    }
 
     /* display version information */
-    if arg == "--version" { version_die() }
+    if arg == "--version"
+    {
+        super::fatal_msg!("{} {} by {}",
+            env!("CARGO_BIN_NAME"),
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_AUTHORS"));
+    }
 
     /* next command line argument must be a search path */
     if arg == "-L" { return (true, Some(State::ExpectingSearchPath)) }
@@ -138,23 +147,4 @@ fn parse_single_arg(arg: &String) -> (bool, Option<State>)
     if arg == "--end-group" { return (true, Some(State::ExpectingAnything)) }
 
     return (false, None) /* nothing handled and no change to state */
-}
-
-/* softare information and error messages */
-fn version_die()
-{
-    eprintln!("{} {} by {}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_AUTHORS"));
-    std::process::exit(1);
-}
-
-fn usage_die()
-{
-    eprintln!("Usage: {} [options] <file>...", env!("CARGO_BIN_NAME"));
-    std::process::exit(1);
-}
-
-fn wrong_flavor_die()
-{
-    eprintln!("{} only supports the 'gnu' interface flavor", env!("CARGO_PKG_NAME"));
-    std::process::exit(1);
 }

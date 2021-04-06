@@ -5,11 +5,8 @@
  * See LICENSE for usage and copying.
  */
 
-use std::path::{PathBuf};
-use goblin::archive::Archive;
-
 /* link the given arvhive into the final executable. return number of new unresolved references */
-pub fn link(filename: PathBuf) -> usize
+pub fn link(filename: std::path::PathBuf) -> usize
 {
     /* load archive into byte slice */
     let contents = super::load_file_into_bytes(filename.clone());
@@ -17,7 +14,7 @@ pub fn link(filename: PathBuf) -> usize
 
     let mut refs = 0;
 
-    match Archive::parse(contents.as_slice())
+    match goblin::archive::Archive::parse(contents.as_slice())
     {
         Ok(arc) =>
         {
@@ -28,21 +25,13 @@ pub fn link(filename: PathBuf) -> usize
                 let slice = match arc.extract(member, contents.as_slice())
                 {
                     Ok(s) => s,
-                    Err(e) =>
-                    {
-                        eprintln!("Failed to extract {} from archive {}: {}", member, filename, e);
-                        std::process::exit(1);
-                    }
+                    Err(e) => super::fatal_msg!("Failed to extract {} from archive {}: {}", member, filename, e)
                 };
 
                 refs = refs + super::obj::link_slice(slice);
             }
         },
-        Err(e) =>
-        {
-            eprintln!("Cannot parse archive {}: {}", filename, e);
-            std::process::exit(1);
-        }
+        Err(e) => super::fatal_msg!("Cannot parse archive {}: {}", filename, e)
     }
 
     refs
