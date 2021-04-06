@@ -25,7 +25,6 @@ impl Config
 struct Output
 {
     entry: String,
-    sections: Vec<String>,
     start_symbol: Option<String>,
     end_symbol: Option<String>,
     alignment: usize,
@@ -35,6 +34,7 @@ struct Output
 #[derive(Deserialize)]
 struct Section
 {
+    include: Vec<String>,
     start_symbol: Option<String>,
     end_symbol: Option<String>,
     alignment: usize
