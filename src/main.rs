@@ -32,12 +32,13 @@ extern crate serde_derive;
 extern crate byterider;
 extern crate goblin;
 
-mod cmd;     /* command-line parser */
-mod context; /* describe the linking context */
-mod config;  /* configuration file parser */
-mod search;  /* find files for the linking process */
-mod obj;     /* parse object files */
-mod rlib;    /* parse rlib files */
+mod cmd;      /* command-line parser */
+mod context;  /* describe the linking context */
+mod config;   /* configuration file parser */
+mod search;   /* find files for the linking process */
+mod obj;      /* parse object files */
+mod rlib;     /* parse rlib files */
+mod generate; /* create ELF executable files */
 
 /* print a message to stderr and exit immediately */
 #[macro_export]
@@ -49,7 +50,7 @@ macro_rules! fatal_msg
 
 fn main()
 {
-    /* find out what needs to be done from command line arguments */
+    /* find out from command line arguments what needs to be done */
     let context = cmd::parse_args();
 
     /* check that we have a configuration file */
@@ -62,11 +63,9 @@ fn main()
     /* find out what needs to be done from the specified configuration file */
     let _config = config::parse_config(&config_filename);
 
-    /* get a database ready of paths to search files for in */
-    let mut paths = search::Paths::new();
-
-    /* perform the link */
-    context.hit_it(&mut paths);
+    /* create a structure that contains the info needed to make the ELF executable */
+    let exe = context.to_executable();
+    eprintln!("{:?}", exe);
 
     std::process::exit(1);
 }
