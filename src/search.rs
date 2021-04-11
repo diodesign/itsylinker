@@ -5,18 +5,18 @@
  * See LICENSE for usage and copying.
  */
 
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub struct Paths
 {
-    paths: BTreeSet<String>
+    paths: HashSet<String>
 }
 
 impl Paths
 {
-    pub fn new() -> Paths { Paths {paths: BTreeSet::new() } }
+    pub fn new() -> Paths { Paths {paths: HashSet::new() } }
 
     pub fn add(&mut self, pathname: &String)
     {
