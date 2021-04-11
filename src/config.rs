@@ -7,13 +7,13 @@
  */
 
 use serde_derive::Deserialize;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct Config
 {
     output: Output,
-    section: Option<BTreeMap<String, Section>>
+    section: Option<HashMap<String, Section>>
 }
 
 impl Config
