@@ -11,6 +11,7 @@
 use super::obj;
 use super::rlib;
 use super::search::Paths;
+use super::generate::Executable;
 
 pub type Filename = String;
 
@@ -86,29 +87,35 @@ impl Context
         ActionIter::new(&self)
     }
 
-    /* run through the stream of actions to take to complete the linking process */
-    pub fn hit_it(&self, paths: &mut Paths)
+    /* run through the stream of actions to produce a data structure
+       describing the contents of the ELF executable */
+    pub fn to_executable(&self) -> Executable
     {
+        let mut paths = super::search::Paths::new();
+        let mut exe = super::generate::Executable::new();
+
         for item in self.stream_iter()
         {
             match item
             {
                 StreamItem::SearchPath(f) => paths.add(&f),
-                StreamItem::Group(g) => self.process_group(g, &paths),
-                StreamItem::File(f) => { self.process_file(f, &paths); }
+                StreamItem::Group(g) => self.process_group(g, &mut exe, &paths),
+                StreamItem::File(f) => { self.process_file(f, &mut exe, &paths); }
             }
         }
+
+        exe
     }
 
-    /* link the given file into the final executable. return number of new unresolved references */
-    fn process_file(&self, filename: String, paths: &Paths) -> usize
+    /* link the given file into the given executable. return number of new unresolved references */
+    fn process_file(&self, filename: String, exe: &mut Executable, paths: &Paths) -> usize
     {
         if let Some(path) = paths.find_file(&filename)
         {
             match path.as_path().extension().unwrap().to_str().unwrap()
             {
-                "o" => obj::link(path),
-                "rlib" => rlib::link(path),
+                "o" => obj::link(path, exe),
+                "rlib" => rlib::link(path, exe),
                 _ => super::fatal_msg!("Unrecognized file to link: {}", filename)
             }
         }
@@ -119,7 +126,7 @@ impl Context
     }
 
     /* loop through the group's files over and over until there are no new unresolved references */
-    fn process_group(&self, group: Group, paths: &Paths)
+    fn process_group(&self, group: Group, exe: &mut Executable, paths: &Paths)
     {
         loop
         {
@@ -127,10 +134,9 @@ impl Context
 
             for member in group.iter()
             {
-                match member
+                if let StreamItem::File(f) = member
                 {
-                    StreamItem::File(f) => new_refs = new_refs + self.process_file(f.clone(), paths),
-                    _ => () /* ignore non-files */
+                    new_refs = new_refs + self.process_file(f.clone(), exe, paths);
                 }
             }
 
