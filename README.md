@@ -2,7 +2,7 @@
 
 Generate 64-bit RISC-V (RV64I) ELF executables from suitable ELF object files. The goal of this project is to produce a minimalist, stable linker in Rust primarily for the [Diosix](https://diosix.org) project. 
 
-itsylinker is compatible with the `binutils ld` command-line interface. The invocation for a typical application ELF execuable would be:
+itsylinker is compatible with a subset of the `binutils ld` command-line interface. The invocation for a typical application ELF execuable would be:
 
 ```
 itsylinker -o <output filename> -T <config filename> -L <search path> <list of object filenames>
