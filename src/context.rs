@@ -1,4 +1,4 @@
-/* Centralize all the context we can about a particular linking task
+/* Centralize all context and linking here
  * 
  * The order of files on the command line is important, so store
  * the command line arguments as a stream of objects we'll step through one at a time
@@ -10,7 +10,9 @@
 
 use super::obj;
 use super::rlib;
+use super::section;
 use super::search::Paths;
+use super::config::{self, Config};
 use super::generate::Executable;
 
 pub type Filename = String;
@@ -44,8 +46,8 @@ impl Group
 pub struct Context
 {
     output_file: Filename,          /* this can be set at any time */
-    config_file: Option<Filename>,  /* this can be set at any time */
-    input_stream: Vec<StreamItem>,         /* a list of streamed items to process */
+    input_stream: Vec<StreamItem>,  /* a list of streamed items to process */
+    config: Option<Config>
 }
 
 impl Context
@@ -58,7 +60,7 @@ impl Context
             output_file: String::from("a.out"),
 
             /* leave the rest blank */
-            config_file: None,
+            config: None,
             input_stream: Vec::new(),
         }
     }
@@ -74,13 +76,13 @@ impl Context
         self.output_file = path.clone();
     }
 
-    pub fn set_config_file(&mut self, path: &String)
-    {
-        self.config_file = Some(path.clone());
-    }
-
     pub fn get_output_file(&self) -> String { self.output_file.clone() }
-    pub fn get_config_file(&self) -> Option<String> { self.config_file.clone() }
+
+    /* parse config file and stash contents in this context */
+    pub fn parse_config_file(&mut self, path: &String)
+    {
+        self.config = Some(config::parse_config(&path));
+    }
 
     pub fn stream_iter(&self) -> ActionIter
     {
@@ -91,9 +93,15 @@ impl Context
        describing the contents of the ELF executable */
     pub fn to_executable(&self) -> Executable
     {
+        /* bail out now if no config file has been loaded */
+        (self.config.is_none()).then(||
+            super::fatal_msg!("Linker configuration file must be specified with -T")
+        );
+        
         let mut paths = super::search::Paths::new();
         let mut exe = super::generate::Executable::new();
 
+        /* bring in all section headers and the symbols */
         for item in self.stream_iter()
         {
             match item
@@ -103,6 +111,9 @@ impl Context
                 StreamItem::File(f) => { self.process_file(f, &mut exe, &paths); }
             }
         }
+
+        /* arrange the layout of the sections */
+        section::arrange(&self.config.clone().unwrap(), &mut exe);
 
         exe
     }

@@ -18,6 +18,13 @@
  * Interspersed in the command line arguments are object and library files to link together to form the final ELF executable.
  * Note: A configuration file must be provided. This is a toml file described in config.rs. It is not compatible with other linkers.
  * 
+ * References:
+ * https://man7.org/linux/man-pages/man5/elf.5.html
+ * https://lwn.net/Articles/276782/
+ * https://www.cs.cornell.edu/courses/cs3410/2013sp/lecture/15-linkers2-i-g.pdf
+ * https://github.com/riscv/riscv-elf-psabi-doc/blob/master/riscv-elf.md
+ * Linkers & Loaders, John R. Levine, https://linker.iecc.com/
+ * 
  * (c) Chris Williams, 2021.
  *
  * See LICENSE for usage and copying.
@@ -31,6 +38,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate byterider;
 extern crate goblin;
+extern crate wildmatch;
 
 mod cmd;      /* command-line parser */
 mod context;  /* describe the linking context */
@@ -39,6 +47,7 @@ mod search;   /* find files for the linking process */
 mod obj;      /* parse object files */
 mod rlib;     /* parse rlib files */
 mod generate; /* create ELF executable files */
+mod section;  /* manage sections */
 
 /* print a message to stderr and exit immediately */
 #[macro_export]
@@ -50,18 +59,8 @@ macro_rules! fatal_msg
 
 fn main()
 {
-    /* find out from command line arguments what needs to be done */
+    /* find out from command line arguments and configuration file what needs to be done */
     let context = cmd::parse_args();
-
-    /* check that we have a configuration file */
-    let config_filename = match context.get_config_file()
-    {
-        Some(f) => f,
-        None => fatal_msg!("Linker configuration file must be specified with -T")
-    };
-
-    /* find out what needs to be done from the specified configuration file */
-    let _config = config::parse_config(&config_filename);
 
     /* create a structure that contains the info needed to make the ELF executable */
     let exe = context.to_executable();

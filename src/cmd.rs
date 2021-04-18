@@ -79,10 +79,11 @@ pub fn parse_args() -> Context
                 state = State::ExpectingAnything;
             },
 
-            /* the argument is expected to be the linker config script filename */
+            /* the argument is expected to be the linker config script filename.
+               it's parsed immediately and contents stashed in the context */
             State::ExpectingConfigFile =>
             {
-                context.set_config_file(arg);
+                context.parse_config_file(arg);
                 state = State::ExpectingAnything;
             },
 

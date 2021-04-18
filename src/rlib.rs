@@ -41,7 +41,12 @@ pub fn link_slice(source: &PathBuf, slice: &[u8], exe: &mut Executable) -> usize
                 /* only accept .o and .rlib files, skip the rest */
                 match Path::new(member).extension().unwrap_or(OsStr::new("")).to_str().unwrap()
                 {
-                    "o"    => refs = refs + super::obj::link_slice(source, slice, exe),
+                    "o" =>
+                    {
+                        let mut canonical_source_name = source.clone();
+                        canonical_source_name.push(member);
+                        refs = refs + super::obj::link_slice(&canonical_source_name, slice, exe);
+                    },
                     "rlib" => refs = refs + link_slice(source, slice, exe),
                     _ => ()
                 }

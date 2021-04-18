@@ -1,12 +1,5 @@
 /* itsylinker object file parser
  * 
- * references:
- * https://man7.org/linux/man-pages/man5/elf.5.html
- * https://lwn.net/Articles/276782/
- * https://www.cs.cornell.edu/courses/cs3410/2013sp/lecture/15-linkers2-i-g.pdf
- * https://github.com/riscv/riscv-elf-psabi-doc/blob/master/riscv-elf.md
- * Linkers & Loaders, John R. Levine, https://linker.iecc.com/
- * 
  * (c) Chris Williams, 2021.
  *
  * See LICENSE for usage and copying.
@@ -45,7 +38,10 @@ pub fn link_slice(source: &std::path::PathBuf, slice: &[u8], exe: &mut Executabl
     (object.is_64 != true).then(||
         super::fatal_msg!("Cannot parse 32-bit object file {})", source_filename));
 
-    /* gather up section headers in this file and pair their metadata with object file's location */
+    /* cache this object file's contents so it can be used later to build the final executable */
+    exe.cache_section_source(source_filename, slice);
+
+    /* gather up section headers in this file and store their contents and metadata in a big table */
     for sh in object.section_headers
     {
         if let Some(sh_name) = object.shdr_strtab.get_unsafe(sh.sh_name)

@@ -9,35 +9,58 @@
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
+pub const SECTIONS: [&str; 3] = [
+    "text",
+    "data",
+    "bss"
+];
+
+#[derive(Clone)]
 #[derive(Deserialize)]
 pub struct Config
 {
     output: Output,
-    section: Option<HashMap<String, Section>>
+    section: HashMap<String, Section>
 }
 
 impl Config
 {
     pub fn get_entry(&self) -> &String { &self.output.entry }
+    pub fn get_sections(&self) -> &HashMap<String, Section> { &self.section }
 }
 
+#[derive(Clone)]
 #[derive(Deserialize)]
-struct Output
+pub struct Output
 {
     entry: String,
     start_symbol: Option<String>,
     end_symbol: Option<String>,
     alignment: usize,
-    dynamic_relocation: bool
+    dynamic_relocation: bool,
+    base_phys_addr: Option<usize>,
+    base_virt_addr: Option<usize>
 }
 
+impl Output
+{
+    pub fn get_alignment(&self) -> usize { self.alignment }
+}
+
+#[derive(Clone)]
 #[derive(Deserialize)]
-struct Section
+pub struct Section
 {
     include: Vec<String>,
     start_symbol: Option<String>,
     end_symbol: Option<String>,
     alignment: usize
+}
+
+impl Section
+{
+    pub fn get_sections_to_include(&self) -> &Vec<String> { &self.include }
+    pub fn get_alignment(&self) -> usize { self.alignment }
 }
 
 /* load the given file into memory and parse it, returning a config structure */
