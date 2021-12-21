@@ -38,7 +38,7 @@ impl Paths
         }
 
         /* if we're still here then we need to search for this file */
-        for prefix in self.paths.clone()
+        for prefix in &self.paths
         {
             let mut path = Path::new(&prefix).to_path_buf();
             path.push(filename);

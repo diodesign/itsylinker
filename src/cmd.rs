@@ -5,7 +5,7 @@
  * See LICENSE for usage and copying.
  */
 
-use super::context::{ Context, Group, StreamItem };
+use super::context::{Context, Group, StreamItem};
 
 /* use a state machine to analyze command line args */
 enum State
@@ -137,9 +137,16 @@ fn parse_single_arg(arg: &String) -> (bool, Option<State>)
     /* ignore requests to garbage collect sections: we'll do that automatically */
     if arg == "--gc-sections" { return (true, None) }
 
-    /* ignore requests for static and dynamic: that's handled automatically and in the config file */
+    /* ignore requests for static and dynamic: that's handled automatically from the config file */
     if arg == "-Bstatic" { return (true, None) }
     if arg == "-Bdynamic" { return (true, None) }
+
+    /* ignore DT_NEEDED tags */
+    if arg == "--as-needed" { return (true, None) }
+    if arg == "--no-add-needed" { return (true, None) }
+
+    /* stack is always non-executable */
+    if arg == "-znoexecstack" { return (true, None) }
 
     /* put us into group mode. if we were already in group mode, continue */
     if arg == "--start-group" { return (true, Some(State::WaitingForGroupEnd)) }

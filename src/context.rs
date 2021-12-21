@@ -8,12 +8,9 @@
  * See LICENSE for usage and copying.
  */
 
-use super::obj;
-use super::rlib;
-use super::section;
 use super::search::Paths;
-use super::config::{self, Config};
-use super::generate::Executable;
+use super::config::{ self, Config };
+use super::manifest::Manifest;
 
 pub type Filename = String;
 
@@ -65,6 +62,9 @@ impl Context
         }
     }
 
+    /* retrieve the configuration in this context. panics if not defined */
+    pub fn get_config(&self) -> Option<&Config> { self.config.as_ref() }
+
     /* functions to update and access the link context */
     pub fn add_to_stream(&mut self, item: StreamItem)
     {
@@ -84,79 +84,57 @@ impl Context
         self.config = Some(config::parse_config(&path));
     }
 
-    pub fn stream_iter(&self) -> ActionIter
+    fn stream_iter(&self) -> ActionIter
     {
         ActionIter::new(&self)
     }
 
-    /* run through the stream of actions to produce a data structure
-       describing the contents of the ELF executable */
-    pub fn to_executable(&self) -> Executable
+    /* load up the given file to link into the final executable */
+    fn add_file(&self, filename: &String, manifest: &mut Manifest, paths: &Paths)
     {
-        /* bail out now if no config file has been loaded */
-        (self.config.is_none()).then(||
-            super::fatal_msg!("Linker configuration file must be specified with -T")
-        );
-        
-        let mut paths = super::search::Paths::new();
-        let mut exe = super::generate::Executable::new();
+        if let Some(path) = paths.find_file(&filename)
+        {
+            manifest.add(&path);
+        }
+        else
+        {
+            fatal_msg!("Cannot find file {} to link", filename);
+        }
+    }
+
+    /* load a group of files to link. a group of files is right now treated
+       as a list of files to add. in future, we may need to preserve the
+       grouping or act in a specific way per group */
+    fn add_group(&self, group: &Group, manifest: &mut Manifest, paths: &Paths)
+    {
+        for member in group.iter()
+        {
+            if let StreamItem::File(file) = member
+            {
+                self.add_file(file, manifest, paths);
+            }
+        }
+    }
+
+    /* iterate over the stream, performing each task one by one to create
+       a manifest of files to link, and return it */
+    pub fn to_manifest(&self) -> Manifest
+    {
+        let mut paths = Paths::new();
+        let mut manifest = Manifest::new();
 
         /* bring in all section headers and the symbols */
         for item in self.stream_iter()
         {
             match item
             {
-                StreamItem::SearchPath(f) => paths.add(&f),
-                StreamItem::Group(g) => self.process_group(g, &mut exe, &paths),
-                StreamItem::File(f) => { self.process_file(f, &mut exe, &paths); }
-            }
+                StreamItem::SearchPath(path) => paths.add(&path),
+                StreamItem::Group(group) => self.add_group(&group, &mut manifest, &paths),
+                StreamItem::File(file) => self.add_file(&file, &mut manifest, &paths)
+            }   
         }
 
-        /* arrange the layout of the sections */
-        section::arrange(&self.config.clone().unwrap(), &mut exe);
-
-        exe
-    }
-
-    /* link the given file into the given executable. return number of new unresolved references */
-    fn process_file(&self, filename: String, exe: &mut Executable, paths: &Paths) -> usize
-    {
-        if let Some(path) = paths.find_file(&filename)
-        {
-            match path.as_path().extension().unwrap().to_str().unwrap()
-            {
-                "o" => obj::link(path, exe),
-                "rlib" => rlib::link(path, exe),
-                _ => super::fatal_msg!("Unrecognized file to link: {}", filename)
-            }
-        }
-        else
-        {
-            super::fatal_msg!("Cannot find file {} to link", filename);
-        }
-    }
-
-    /* loop through the group's files over and over until there are no new unresolved references */
-    fn process_group(&self, group: Group, exe: &mut Executable, paths: &Paths)
-    {
-        loop
-        {
-            let mut new_refs = 0;
-
-            for member in group.iter()
-            {
-                if let StreamItem::File(f) = member
-                {
-                    new_refs = new_refs + self.process_file(f.clone(), exe, paths);
-                }
-            }
-
-            /* exit when we're done creating unresolved references within this group */
-            if new_refs == 0
-            {
-                break;
-            }
-        }
+        manifest
     }
 }
 

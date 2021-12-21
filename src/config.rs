@@ -9,11 +9,7 @@
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
-pub const SECTIONS: [&str; 3] = [
-    "text",
-    "data",
-    "bss"
-];
+pub const SECTIONS: [&str; 3] = [ "text", "data", "bss" ];
 
 #[derive(Clone)]
 #[derive(Deserialize)]
@@ -27,6 +23,7 @@ impl Config
 {
     pub fn get_entry(&self) -> &String { &self.output.entry }
     pub fn get_sections(&self) -> &HashMap<String, Section> { &self.section }
+    pub fn get_output(&self) -> &Output { &self.output }
 }
 
 #[derive(Clone)]
@@ -45,6 +42,7 @@ pub struct Output
 impl Output
 {
     pub fn get_alignment(&self) -> usize { self.alignment }
+    pub fn get_dynamic_relocation(&self) -> bool { self.dynamic_relocation }
 }
 
 #[derive(Clone)]
