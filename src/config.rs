@@ -31,13 +31,13 @@ pub struct Output
     relocatable: bool,
     start_symbol: Option<String>,
     end_symbol: Option<String>,
-    base_phys_addr: Option<usize>,
-    base_virt_addr: Option<usize>
+    base_phys_addr: Option<u64>,
+    base_virt_addr: Option<u64>
 }
 
 pub enum ExecutablePlacement
 {
-    Static(usize, usize), /* base phys, virt addresses */
+    Static(u64, u64), /* base phys, virt addresses */
     Relocatable
 }
 

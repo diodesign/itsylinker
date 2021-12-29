@@ -6,13 +6,13 @@
  */
 
 use super::manifest::{ self, Manifest, FileIdentifier };
-use super::config::Config;
+use super::config:: { Config, ExecutablePlacement };
 
 use wildmatch::WildMatch;
 use indexmap::set::IndexSet;
 use object::{ Object, ObjectSection, SectionIndex };
 
-pub const STANDARD_SECTIONS: [(&str, SectionSegment); 4] =
+const STANDARD_SECTIONS: [(&str, SectionSegment); 4] =
 [
     ("text",   SectionSegment::LoadableReadExec),
     ("rodata", SectionSegment::LoadableRead),
@@ -22,7 +22,7 @@ pub const STANDARD_SECTIONS: [(&str, SectionSegment); 4] =
 
 /* describe a segment into which sections are grouped */
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum SectionSegment
+enum SectionSegment
 {
     LoadableRead,
     LoadableReadWrite,
@@ -31,11 +31,19 @@ pub enum SectionSegment
 
 /* describe a section within an object within the manifest */
 #[derive(PartialEq, Eq, Hash)]
-pub struct ManifestSection
+struct ManifestSection
 {
     pub identifier: FileIdentifier,
     pub index: SectionIndex,
     pub parent: usize
+}
+
+/* describe an ordered section in memory */
+struct OrderedSection
+{
+    pub section_index: usize,
+    pub base_phys_addr: u64,
+    pub base_virt_addr: u64
 }
 
 /* describe the gathered up components */
@@ -43,6 +51,7 @@ pub struct Collection
 {
     sections: IndexSet<ManifestSection>,
     merged: Vec<Vec<usize>>,
+    ordered: Vec<OrderedSection>,
     e_flags: object::FileFlags
 }
 
@@ -89,7 +98,7 @@ impl Collection
                             {
                                 Ok(name) => name,
                                 Err(reason) =>
-                                    fatal_msg!("Can't read section's name in {}: {}",
+                                    fatal_msg!("Can't read section name in {}: {}",
                                     obj_name.to_str().unwrap(), reason)
                             };
                             let kind = section.kind();
@@ -122,8 +131,7 @@ impl Collection
 
         Collection
         {
-            sections,
-            e_flags,
+            sections, e_flags, ordered: Vec::new(),
             merged:
             {
                 /* initialize array of standard section groups with empty queues */
@@ -149,8 +157,14 @@ impl Collection
     }
 
     /* arrange the merged sections into memory */
-    pub fn arrange(&self, manifest: &Manifest)
+    pub fn arrange(&mut self, config: &Config, manifest: &Manifest)
     {
+        let (mut phys_addr, mut virt_addr) = match config.get_output().get_placement()
+        {
+            ExecutablePlacement::Relocatable => (0, 0), /* just start from zero for reloc ELFs */
+            ExecutablePlacement::Static(phys, virt) => (phys, virt)
+        };
+
         for standard_section_idx in 0..self.merged.len()
         {
             eprintln!("standard section: .{}:", STANDARD_SECTIONS[standard_section_idx].0);
@@ -161,14 +175,49 @@ impl Collection
 
                 let mapping = match manifest.get(&self.sections[section_idx].identifier)
                 {
-                    None => fatal_msg!("Can't retrieve file {:?}", self.sections[section_idx].identifier),
+                    None => fatal_msg!("Unexpected error: Can't find mapping for file {:?} during arrangement", self.sections[section_idx].identifier),
                     Some(mapping) => mapping
                 };
                 
                 let parsed = manifest::parse(mapping);
-                eprintln!("  {}", parsed.section_by_index(self.sections[section_idx].index).unwrap().name().unwrap_or(""));
+                let section = match parsed.section_by_index(self.sections[section_idx].index)
+                {
+                    Ok(section) => section,
+                    Err(reason) => fatal_msg!("Unexpected error: Can't find section {} in {:?}: {}",
+                                    self.sections[section_idx].index.0, self.sections[section_idx].identifier, reason)
+                };
+
+                phys_addr = align_to(phys_addr, section.align());
+                virt_addr = align_to(virt_addr, section.align());
+                self.ordered.push(OrderedSection
+                {
+                    section_index: section_idx,
+                    base_phys_addr: phys_addr,
+                    base_virt_addr: virt_addr
+                });
+
+                eprintln!("  0x{:x}: {}", virt_addr, parsed.section_by_index(self.sections[section_idx].index).unwrap().name().unwrap_or(""));
+
+                let size = section.size();
+                phys_addr = phys_addr + size;
+                virt_addr = virt_addr + size;
             }
         }
+    }
+}
+
+/* align the given address up to the next power-of-two alignment, if necessary */
+fn align_to(address: u64, alignment: u64) -> u64
+{
+    let align_down = address & !(alignment - 1);
+    
+    if align_down == address
+    {
+        address
+    }
+    else
+    {
+        align_down + alignment
     }
 }
 

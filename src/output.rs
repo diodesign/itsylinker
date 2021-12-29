@@ -23,10 +23,11 @@ pub fn write(cxt: &Context)
     /* produce a manifest of files to link from the config and command line settings */
     let manifest = cxt.to_manifest();
 
-    /* collect and arrange all the required sections. this also updates the e_flags in the executable */
+    /* collect and arrange all the required sections. this also updates the e_flags in the executable.
+       call marge() before arrange() */
     let mut sections = gather::Collection::new(config, &manifest);
     sections.merge();
-    sections.arrange(&manifest);
+    sections.arrange(config, &manifest);
 
     /* start generating the executable */
     let mut output_buffer = Vec::new();
