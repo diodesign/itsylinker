@@ -54,6 +54,12 @@ impl Manifest
         self.add_file(filename, &psuedo_path, mapping);
     }
 
+    /* retrieve memory-mapped file by its filename */
+    pub fn get(&self, filename: &PathBuf) -> Option<&Mmap>
+    {
+        self.data.get(filename)
+    }
+
     /* internal front-end to add_object() and expand_archive(). 
        add the given memory-mapped file. use the psuedo-path to detect the file-type
        => filename = source of the memory-mapped file in storage

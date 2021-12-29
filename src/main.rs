@@ -16,7 +16,8 @@
  * --version        Display version information
  * 
  * Interspersed in the command line arguments are object and library files to link together to form the final ELF executable.
- * Note: A configuration file must be provided. This is a toml file described in config.rs. It is not compatible with other linkers.
+ * Note: A configuration file must be provided, or defaults will be used. The config file is a toml file described in config.rs.
+ * It is not compatible with other linkers.
  * 
  * References:
  * https://man7.org/linux/man-pages/man5/elf.5.html 
@@ -40,6 +41,7 @@ extern crate serde_derive;
 extern crate byterider;
 extern crate wildmatch;
 extern crate memmap2;
+extern crate indexmap;
 
 /* use object for reading and writing ELF assests   */
 extern crate object;
@@ -50,7 +52,7 @@ mod cmd;       /* command-line parser */
 mod context;   /* describe the linking context */
 mod config;    /* configuration file parser */
 mod search;    /* find files for the linking process */
-mod copy;      /* copy sections, symbols, and relocations */
+mod gather;    /* gather sections, symbols, and relocations */
 mod output;    /* generate the ELF executable */
 mod manifest;  /* manage the files to process */
 
@@ -68,4 +70,6 @@ fn main()
     /* figure out from command line arguments and configuration file what needs to be done.
        then write out the executable to storage */
     output::write(&cmd::parse_args());
+
+    std::process::exit(1);
 }

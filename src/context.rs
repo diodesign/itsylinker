@@ -44,7 +44,7 @@ pub struct Context
 {
     output_file: Filename,          /* this can be set at any time */
     input_stream: Vec<StreamItem>,  /* a list of streamed items to process */
-    config: Option<Config>
+    config: Config
 }
 
 impl Context
@@ -55,15 +55,16 @@ impl Context
         {
             /* the ld-compatible executable filename default is a.out */
             output_file: String::from("a.out"),
-
-            /* leave the rest blank */
-            config: None,
-            input_stream: Vec::new(),
+            config: config::default_config(),
+            input_stream: Vec::new()
         }
     }
 
-    /* retrieve the configuration in this context. panics if not defined */
-    pub fn get_config(&self) -> Option<&Config> { self.config.as_ref() }
+    /* retrieve the configuration in this context */
+    pub fn get_config(&self) -> &Config
+    {
+        &self.config
+    }
 
     /* functions to update and access the link context */
     pub fn add_to_stream(&mut self, item: StreamItem)
@@ -81,7 +82,7 @@ impl Context
     /* parse config file and stash contents in this context */
     pub fn parse_config_file(&mut self, path: &String)
     {
-        self.config = Some(config::parse_config(&path));
+        self.config = config::parse_config(&path);
     }
 
     fn stream_iter(&self) -> ActionIter
